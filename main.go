@@ -7,10 +7,26 @@ package main
 import (
 	"flag"
 	//"fmt"
+	log "github.com/omidnikta/logrus"
 	"github.com/weibocom/dschedule/scheduler"
-	"log"
 	//"time"
 )
+
+func init() {
+	// Log as JSON instead of the default ASCII formatter.
+	textFormatter := &log.TextFormatter{
+		FullTimestamp: true,
+	}
+	log.SetFormatter(textFormatter)
+	//log.SetFormatter(&log.JSONFormatter{})
+
+	// Output to stderr instead of stdout, could also be a file.
+	// log.SetOutput(os.Stderr)
+
+	// Only log the warning severity or above.
+	log.SetLevel(log.DebugLevel)
+
+}
 
 // run consul first:
 // consul agent -server -bootstrap -dc yf -data-dir /tmp/consul -client=0.0.0.0 -ui-dir=/data0/consul_ui/
@@ -23,11 +39,19 @@ func main() {
 	var storageKeyPrefix = flag.String("storage-key-prefix", "dschedule", "storage key prefix")
 	flag.Parse()
 
-	log.Println("Dschedule start with: storage=%v, prefix=%s, listen-port=%d, debug=%v, ui-dir=%v .",
+	log.Infof("Dschedule start with: storage=%v, prefix=%s, listen-port=%d, debug=%v, ui-dir=%v .",
 		*storage, storageKeyPrefix, *port, *debug, *uiDir)
 
 	// for compile test
-	_, _ = scheduler.NewResourceManager()
+	resourceManager, _ = scheduler.NewResourceManager()
+
+	server, err := api.NewHTTPServer("0.0.0.0", *port, *uiDir, *debug, resourceManager)
+	if err != nil {
+		log.Errorf("[main.NewHTTPServer] falied: %v", err)
+		return
+	}
+
+	server.Start()
 
 	log.Fatalln("Dschedule stopped!")
 }
