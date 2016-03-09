@@ -5,6 +5,7 @@ import (
 	"fmt"
 	log "github.com/omidnikta/logrus"
 	sched "github.com/weibocom/dschedule/scheduler"
+	"github.com/weibocom/dschedule/util"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -97,7 +98,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 }
 
 func (s *HTTPServer) Start() {
-	log.Warnf("Http Server listening at addr %s", s.addr)
+	log.Infof("Http Server listening at addr %s", s.addr)
 	// Start the server
 	http.Serve(s.listener, s.mux)
 }
@@ -105,7 +106,7 @@ func (s *HTTPServer) Start() {
 // Shutdown is used to shutdown the HTTP server
 func (s *HTTPServer) Shutdown() {
 	if s != nil {
-		log.Debug("http: Shutting down http server (%v)", s.addr)
+		log.Infoln("http: Shutting down http server (%v)", s.addr)
 		s.listener.Close()
 	}
 }
@@ -212,7 +213,7 @@ func (s *HTTPServer) Index(resp http.ResponseWriter, req *http.Request) {
 
 	// Check if we have no UI configured
 	if s.uiDir == "" {
-		resp.Write([]byte("dScheduler " + VERSION))
+		resp.Write([]byte("dScheduler"))
 		return
 	}
 

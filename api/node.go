@@ -6,10 +6,8 @@ import (
 	"fmt"
 	log "github.com/omidnikta/logrus"
 	sched "github.com/weibocom/dschedule/scheduler"
-	"net"
+	"io"
 	"net/http"
-	"net/http/pprof"
-	"os"
 	"strings"
 )
 
@@ -45,7 +43,7 @@ func (s *HTTPServer) NodeEndpoint(resp http.ResponseWriter, req *http.Request) (
 func (s *HTTPServer) getNode(resp http.ResponseWriter, req *http.Request, nodeId string) (*sched.Node, error) {
 	node, err := s.resourceManager.GetNode(nodeId)
 	if err != nil {
-		return nil, fmt.Printf("nodeId:%v is not exist.", nodeId)
+		return nil, fmt.Errorf("nodeId:%v is not exist.", nodeId)
 	}
 	return node, nil
 }
@@ -53,13 +51,14 @@ func (s *HTTPServer) getNode(resp http.ResponseWriter, req *http.Request, nodeId
 func (s *HTTPServer) listNode(resp http.ResponseWriter, req *http.Request) ([]*sched.Node, error) {
 	nodes, err := s.resourceManager.GetNodeList()
 	if err != nil {
-		return nil, fmt.Printf("list node failed, cause %v", err)
+		return nil, fmt.Errorf("list node failed, cause %v", err)
 	}
 	return nodes, nil
 }
 
 func (s *HTTPServer) modifyNode(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
 	// todo
+	return nil, nil
 }
 
 func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
@@ -67,20 +66,22 @@ func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (inter
 	if _, err := io.Copy(buf, req.Body); err != nil {
 		return nil, err
 	}
-	var meta sched.NodeMeta
-	if err := json.Unmarshal(buf.Bytes(), &meta); err != nil {
+	var meta *sched.NodeMeta
+	if err := json.Unmarshal(buf.Bytes(), meta); err != nil {
 		return nil, fmt.Errorf("json unmarshal node meta failed: %v", err)
 	}
 
 	err := s.resourceManager.AddMeta(meta)
 	if err != nil {
+		log.Warnf("RM add node meta failed, cause:%v", err)
 		return nil, fmt.Errorf("RM add node meta failed, cause: %v", err)
 	}
 	return nil, nil
 }
 
-func (s *HTTPServer) deleteNode(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (s *HTTPServer) deleteNode(resp http.ResponseWriter, req *http.Request, nodeId string) (interface{}, error) {
 	// todo
+	return nil, nil
 }
 
 /*
