@@ -29,7 +29,7 @@ func init() {
 }
 
 // run consul first:
-// consul agent -server -bootstrap -dc yf -data-dir /tmp/consul -client=0.0.0.0 -ui-dir=/data0/consul_ui/
+// consul agent -server -bootstrap -data-dir /tmp/consul -client=0.0.0.0 -ui-dir=/data0/consul_ui/
 func main() {
 	var debug = flag.Bool("debug", true, "enable debug")
 	//var cluster = flag.Bool("cluster", false, "for online job server")
