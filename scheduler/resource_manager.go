@@ -2,12 +2,13 @@ package scheduler
 
 import (
 	"fmt"
+	"github.com/weibocom/dschedule/structs"
 	"sync"
 )
 
 type ResourceManager struct {
-	allNodes  []*Node //map[string]*Node
-	freeNodes []*Node
+	allNodes  []*structs.Node //map[string]*structs.Node
+	freeNodes []*structs.Node
 	mutex     sync.Mutex
 }
 
@@ -17,8 +18,8 @@ func NewResourceManager() (*ResourceManager, error) {
 	}, nil
 }
 
-func (this *ResourceManager) AddMeta(meta *NodeMeta) error {
-	node := &Node{
+func (this *ResourceManager) AddMeta(meta *structs.NodeMeta) error {
+	node := &structs.Node{
 		NodeId:    fmt.Sprintf("%s-random-something-else", meta.IP),
 		Used:      false,
 		Reachable: false,
@@ -30,7 +31,7 @@ func (this *ResourceManager) AddMeta(meta *NodeMeta) error {
 	return nil
 }
 
-func (this *ResourceManager) ModifyMeta(nodeId string, meta *NodeMeta) error {
+func (this *ResourceManager) ModifyMeta(nodeId string, meta *structs.NodeMeta) error {
 	// TODO modify
 	// TODO store
 	return nil
@@ -42,7 +43,7 @@ func (this *ResourceManager) RemoveNode(nodeId string) error {
 	return nil
 }
 
-func (this *ResourceManager) GetNode(nodeId string) (*Node, error) {
+func (this *ResourceManager) GetNode(nodeId string) (*structs.Node, error) {
 	for _, node := range this.allNodes {
 		if node.NodeId == nodeId {
 			return node, nil
@@ -51,15 +52,15 @@ func (this *ResourceManager) GetNode(nodeId string) (*Node, error) {
 	return nil, nil
 }
 
-func (this *ResourceManager) GetNodeList() ([]*Node, error) {
+func (this *ResourceManager) GetNodeList() ([]*structs.Node, error) {
 	return this.allNodes, nil
 }
 
 ///////////////////////////////////////////////////////////////
 
-func (this *ResourceManager) AllocNodes(num int /*, rules*/) ([]*Node, error) {
+func (this *ResourceManager) AllocNodes(num int /*, rules*/) ([]*structs.Node, error) {
 
-	var allocs []*Node
+	var allocs []*structs.Node
 
 	if len(this.freeNodes) > num {
 		allocs = this.freeNodes[:num]
@@ -77,7 +78,7 @@ func (this *ResourceManager) AllocNodes(num int /*, rules*/) ([]*Node, error) {
 	return allocs, nil
 }
 
-func (this *ResourceManager) ReturnNodes(nodes []*Node) error {
+func (this *ResourceManager) ReturnNodes(nodes []*structs.Node) error {
 	for _, node := range nodes {
 		node.Used = false
 	}

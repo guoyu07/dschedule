@@ -1,4 +1,4 @@
-package strategy
+package crontab
 
 import (
 	"fmt"
@@ -17,6 +17,7 @@ const (
 
 /**
 * 将时间转换为crontab的格式，时间格式为：HH:MM:SS 或者MM:SS
+* 支持 @hour，@weekly形式的时间格式
  */
 func ParseTime(time string) (string, error) {
 	var expression string = ""

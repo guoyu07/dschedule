@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/omidnikta/logrus"
-	sched "github.com/weibocom/dschedule/scheduler"
+	"github.com/weibocom/dschedule/structs"
 	"io"
 	"net/http"
 	"strings"
@@ -40,7 +40,7 @@ func (s *HTTPServer) NodeEndpoint(resp http.ResponseWriter, req *http.Request) (
 	}
 }
 
-func (s *HTTPServer) getNode(resp http.ResponseWriter, req *http.Request, nodeId string) (*sched.Node, error) {
+func (s *HTTPServer) getNode(resp http.ResponseWriter, req *http.Request, nodeId string) (*structs.Node, error) {
 	node, err := s.resourceManager.GetNode(nodeId)
 	if err != nil {
 		return nil, fmt.Errorf("nodeId:%v is not exist.", nodeId)
@@ -48,7 +48,7 @@ func (s *HTTPServer) getNode(resp http.ResponseWriter, req *http.Request, nodeId
 	return node, nil
 }
 
-func (s *HTTPServer) listNode(resp http.ResponseWriter, req *http.Request) ([]*sched.Node, error) {
+func (s *HTTPServer) listNode(resp http.ResponseWriter, req *http.Request) ([]*structs.Node, error) {
 	nodes, err := s.resourceManager.GetNodeList()
 	if err != nil {
 		return nil, fmt.Errorf("list node failed, cause %v", err)
@@ -66,7 +66,7 @@ func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (inter
 	if _, err := io.Copy(buf, req.Body); err != nil {
 		return nil, err
 	}
-	var meta *sched.NodeMeta
+	var meta *structs.NodeMeta
 	if err := json.Unmarshal(buf.Bytes(), meta); err != nil {
 		return nil, fmt.Errorf("json unmarshal node meta failed: %v", err)
 	}
