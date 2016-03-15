@@ -78,7 +78,9 @@ type Service struct {
 	ServiceType string
 
 	//任务执行的策略，可选值AUTO，CRONTAB，STABLE
-	Strategy string
+	StrategyName string
+
+	StrategyConfig interface{}
 
 	//任务优先级，1-5，数值越大优先级越高
 	Priority int

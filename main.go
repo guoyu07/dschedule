@@ -10,6 +10,7 @@ import (
 	log "github.com/omidnikta/logrus"
 	"github.com/weibocom/dschedule/api"
 	"github.com/weibocom/dschedule/scheduler"
+	"github.com/weibocom/dschedule/strategy"
 	//"time"
 )
 
@@ -46,7 +47,9 @@ func main() {
 	// for compile test
 	resourceManager, _ := scheduler.NewResourceManager()
 
-	server, err := api.NewHTTPServer("0.0.0.0", *port, *uiDir, *debug, resourceManager)
+	serviceManager, _ := strategy.NewServiceManager()
+
+	server, err := api.NewHTTPServer("0.0.0.0", *port, *uiDir, *debug, resourceManager, serviceManager)
 	if err != nil {
 		log.Errorf("[main.NewHTTPServer] falied: %v", err)
 		return

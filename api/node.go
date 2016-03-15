@@ -26,7 +26,7 @@ func (s *HTTPServer) NodeEndpoint(resp http.ResponseWriter, req *http.Request) (
 		fallthrough
 	case "POST":
 		if nodeId != "" {
-			return s.modifyNode(resp, req)
+			return s.modifyNode(resp, req, nodeId)
 		}
 		log.Infoln("add node")
 		return s.addNode(resp, req)
@@ -59,14 +59,12 @@ func (s *HTTPServer) listNode(resp http.ResponseWriter, req *http.Request) ([]*s
 	return nodes, nil
 }
 
-func (s *HTTPServer) modifyNode(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (s *HTTPServer) modifyNode(resp http.ResponseWriter, req *http.Request, nodeId string) (interface{}, error) {
 	meta, err := parseNodeMeta(req)
 	if err != nil {
 		return nil, fmt.Errorf("parse NodeMeta from request failed, cause: %v", err)
 	}
-	// todo
-	// nodeId := req.
-	var nodeId string
+
 	errModify := s.resourceManager.ModifyMeta(nodeId, meta)
 	if errModify != nil {
 		return nil, fmt.Errorf("RM modify node meta failed, cause: %v", errModify)
@@ -74,7 +72,7 @@ func (s *HTTPServer) modifyNode(resp http.ResponseWriter, req *http.Request) (in
 	return nil, nil
 }
 
-func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (string, error) {
 	meta, err := parseNodeMeta(req)
 	if err != nil {
 		return nil, fmt.Errorf("parse NodeMeta from request failed, cause: %v", err)
@@ -89,7 +87,7 @@ func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (inter
 	return nodeId, nil
 }
 
-func (s *HTTPServer) deleteNode(resp http.ResponseWriter, req *http.Request, nodeId string) (interface{}, error) {
+func (s *HTTPServer) deleteNode(resp http.ResponseWriter, req *http.Request, nodeId string) (string, error) {
 	err := s.resourceManager.RemoveNode(nodeId)
 	if err != nil {
 		log.Warnf("RM remove node failed, cause:%v", err)

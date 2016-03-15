@@ -5,6 +5,7 @@ import (
 	"fmt"
 	log "github.com/omidnikta/logrus"
 	sched "github.com/weibocom/dschedule/scheduler"
+	"github.com/weibocom/dschedule/strategy"
 	"github.com/weibocom/dschedule/util"
 	"net"
 	"net/http"
@@ -23,11 +24,13 @@ type HTTPServer struct {
 	mux             *http.ServeMux
 	listener        net.Listener
 	resourceManager *sched.ResourceManager
+	serviceManager  *strategy.ServiceManager
 }
 
 // NewHTTPServers starts new HTTP servers to provide an interface to
 // the agent.
-func NewHTTPServer(ip string, port int, uiDir string, enableDebug bool, resourceManager *sched.ResourceManager) (*HTTPServer, error) {
+func NewHTTPServer(ip string, port int, uiDir string, enableDebug bool, resourceManager *sched.ResourceManager,
+	serviceManager *strategy.ServiceManager) (*HTTPServer, error) {
 
 	httpAddr, err := util.ClientListener(ip, port)
 	if err != nil {
@@ -74,6 +77,7 @@ func NewHTTPServer(ip string, port int, uiDir string, enableDebug bool, resource
 		mux:             mux,
 		listener:        list,
 		resourceManager: resourceManager,
+		serviceManager:  serviceManager,
 	}
 	srv.registerHandlers(enableDebug)
 
