@@ -5,6 +5,11 @@ import (
 	log "github.com/omidnikta/logrus"
 	"github.com/weibocom/dschedule/structs"
 	"sync"
+	"time"
+)
+
+const (
+	NoResourceWaitTime = 10 * time.Second
 )
 
 type ScheduleService struct {
@@ -34,7 +39,8 @@ func NewScheduler(resourceManager *ResourceManager, dockerPort int) (*Scheduler,
 
 func (this *Scheduler) Register(service *structs.Service) (bool, error) {
 	if service.Priority < structs.MinPriority || service.Priority > structs.MaxPriority {
-		return false, fmt.Errorf("service.Priority %d is should in [%d, %d]", service.Priority, structs.MinPriority, structs.MaxPriority)
+		return false, fmt.Errorf("service.Priority %d is should in [%d, %d]",
+			service.Priority, structs.MinPriority, structs.MaxPriority)
 	}
 
 	scheduleService := &ScheduleService{
@@ -61,13 +67,13 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 
 	service := scheduleService.service
 	if service.Dedicated+service.Elastic < len(scheduleService.deployers)+num {
-		return false, fmt.Errorf("Add num %d(existing %d) has been larger than settting by register(%d + %d)", num, len(scheduleService.deployers), service.Dedicated, service.Elastic)
+		return false, fmt.Errorf("Add num %d(existing %d) has been larger than settting by register(%d + %d)",
+			num, len(scheduleService.deployers), service.Dedicated, service.Elastic)
 	}
 
 	// asynchronous
 	go func() {
 		for needRequestNum := num; needRequestNum > 0; {
-			// request resource from rm
 			nodes, err := this.resourceManager.AllocNodes(needRequestNum)
 			if err != nil {
 				log.Errorf("AllocNodes failed: %v", err)
@@ -77,14 +83,14 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 			// deploy
 			var deployers []*Deployer
 			for _, node := range nodes {
-				dockerHost := fmt.Sprintf("%s:%d", node.Meta.IP, this.dockerPort)
-				deployer, err := NewDeployer(dockerHost, service.Container)
+				deployer, err := NewDeployer(node, this.dockerPort, service.Container)
 				if err == nil {
 					err = deployer.Start()
 				}
 				if err != nil {
 					node.Failed++
-					log.Errorf("NewDeployer or Start container IP '%s' failed %d times: %v", node.Meta.IP, node.Failed, err)
+					log.Errorf("NewDeployer or Start container IP '%s' failed %d times: %v",
+						node.Meta.IP, node.Failed, err)
 					err := this.resourceManager.ReturnNodes([]*structs.Node{node})
 					if err != nil {
 						log.Errorf("ReturnNodes %s IP '%s' failed: %v", node.NodeId, node.Meta.IP, err)
@@ -99,12 +105,15 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 			scheduleService.deployers = append(scheduleService.deployers, deployers...)
 			scheduleService.mutex.Unlock()
 
+			needRequestNum -= len(deployers)
 			// remove low priority service nodes
 			if len(deployers) < needRequestNum {
-				needRequestNum -= len(nodes)
+				time.Sleep(NoResourceWaitTime)
+				// TODO TODO TODO do wait priority
+
 				needKill := needRequestNum
-				// TODO search low priority queue and stop them
 			LOOP:
+				// search low priority queue and stop them
 				for i := structs.MinPriority; i < service.Priority; i++ {
 					for serviceId, _ := range this.priorityServices[i] {
 						//fmt.Printf("Key: %s  Value: %s\n", key, value)
@@ -132,11 +141,11 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 		return 0, fmt.Errorf("serviceId %d not Register before", serviceId)
 	}
 
-	scheduleService.mutex.Lock()
 	if len(scheduleService.deployers) <= scheduleService.service.Dedicated {
 		return 0, nil
 	}
 
+	scheduleService.mutex.Lock()
 	reduceNum := num
 	if num < 0 { // remove all when negative num
 		reduceNum = len(scheduleService.deployers)
@@ -153,16 +162,28 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 	reduceDeployers := scheduleService.deployers[:reduceNum]
 	scheduleService.mutex.Unlock()
 
+	var returnNodes []*structs.Node
 	for _, deployer := range reduceDeployers {
 		err := deployer.Stop()
 		if err != nil {
 			log.Errorf("Stop container failed, serviceId:%s: %v", serviceId, err)
 		}
+		// TODO deal with the failed node
+		returnNodes = append(returnNodes, deployer.node)
+	}
+
+	err := this.resourceManager.ReturnNodes(returnNodes)
+	if err != nil {
+		log.Errorf("ReturnNodes len=%d failed: %v", len(returnNodes), err)
 	}
 
 	return reduceNum, nil
 }
 
-func (this *Scheduler) Status(serviceId string) /*struct runtime status */ error {
-	return nil
+func (this *Scheduler) Status(serviceId string) (*structs.Service, int, error) {
+	scheduleService := this.services[serviceId]
+	if scheduleService == nil {
+		return nil, 0, fmt.Errorf("serviceId %d not Register before", serviceId)
+	}
+	return scheduleService.service, len(scheduleService.deployers), nil
 }
