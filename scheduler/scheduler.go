@@ -22,7 +22,7 @@ type Service struct {
 
 type Scheduler struct {
 	services map[string]interface{}
-	index    int
+	//index    int
 
 	resourceManager *ResourceManager
 	dockerHost      string
@@ -30,22 +30,22 @@ type Scheduler struct {
 
 func NewScheduler(resourceManager *ResourceManager, dockerHost string) (*Scheduler, error) {
 	return &Scheduler{
-		services:        make(map[string]interface{}),
-		index:           0,
+		services: make(map[string]interface{}),
+		//index:           0,
 		resourceManager: resourceManager,
 		dockerHost:      dockerHost,
 	}, nil
 }
 
-func (this *Scheduler) Register( /*struct config*/ ) (string, error) {
+func (this *Scheduler) Register( /*struct config*/ ) (bool, error) {
 	registerId := fmt.Sprintf("registerId-%d", this.index)
 	this.index++
 
 	this.services[registerId] = ""
-	return registerId, nil
+	return true, nil
 }
 
-func (this *Scheduler) Add(registerId string, num int) error {
+func (this *Scheduler) Add(serviceId string, num int) error {
 	// TODO asynchronous
 	// TODO check if > max
 	// TODO request resource from rm
