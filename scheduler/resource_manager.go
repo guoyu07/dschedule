@@ -7,10 +7,15 @@ import (
 	"sync"
 )
 
+const (
+	MaxFailed = 3
+)
+
 type ResourceManager struct {
-	allNodes  []*structs.Node //map[string]*structs.Node
-	freeNodes []*structs.Node
-	mutex     sync.Mutex
+	allNodes    []*structs.Node //map[string]*structs.Node
+	freeNodes   []*structs.Node
+	failedNodes []*structs.Node
+	mutex       sync.Mutex
 }
 
 func NewResourceManager() (*ResourceManager, error) {
@@ -41,7 +46,7 @@ func (this *ResourceManager) ModifyMeta(nodeId string, meta *structs.NodeMeta) e
 			return nil
 		}
 	}
-	return fmt.Errorf("No nodeId: %d", nodeId)
+	return fmt.Errorf("No nodeId: %s", nodeId)
 }
 
 func (this *ResourceManager) RemoveNode(nodeId string) error {
@@ -52,7 +57,7 @@ func (this *ResourceManager) RemoveNode(nodeId string) error {
 		}
 	}
 	if idx < 0 {
-		return fmt.Errorf("No nodeId: %d", nodeId)
+		return fmt.Errorf("No nodeId: %s", nodeId)
 	}
 
 	tNodes := this.allNodes
@@ -103,8 +108,13 @@ func (this *ResourceManager) AllocNodes(num int /*, rules*/) ([]*structs.Node, e
 func (this *ResourceManager) ReturnNodes(nodes []*structs.Node) error {
 	for _, node := range nodes {
 		node.Used = false
+		if node.Failed < MaxFailed {
+			this.freeNodes = append(this.freeNodes, node)
+		} else {
+			log.Warnf("Node '%s' IP '%s' Failed have reached %d, insert into failed queue", node.NodeId, node.Meta.IP, node.Failed)
+			this.failedNodes = append(this.failedNodes, node)
+		}
 	}
-	this.freeNodes = append(this.freeNodes, nodes...)
 	// TODO store
 	return nil
 }

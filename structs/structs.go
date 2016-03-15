@@ -20,12 +20,16 @@ const (
 	ServiceStrategyAuto    = "AUTO"
 	ServiceStrategyCrontab = "CRONTAB"
 	ServiceStrategyStable  = "STABLE"
+
+	MaxPriority = 5
+	MinPriority = 1
 )
 
 type Node struct {
 	NodeId    string `json:"nodeId"` // uniq
 	Used      bool   `json:"used"`
 	Reachable bool   `json:"reachable"`
+	Failed    int    `json:"failed"` // TODO more strategy
 
 	Meta *NodeMeta `json:"meta"`
 }
