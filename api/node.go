@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/omidnikta/logrus"
-	sched "github.com/weibocom/dschedule/scheduler"
+	"github.com/weibocom/dschedule/structs"
 	"io"
 	"net/http"
 	"strings"
 )
 
 func (s *HTTPServer) NodeEndpoint(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
+	log.Infof("http request url: %v, method: %v", req.URL.String(), req.Method)
 	nodeId := strings.TrimPrefix(req.URL.Path, "/node/")
 	// Switch on the method
+	log.Infoln(nodeId)
 	switch req.Method {
 	case "GET":
 		if nodeId != "" {
@@ -26,6 +28,7 @@ func (s *HTTPServer) NodeEndpoint(resp http.ResponseWriter, req *http.Request) (
 		if nodeId != "" {
 			return s.modifyNode(resp, req)
 		}
+		log.Infoln("add node")
 		return s.addNode(resp, req)
 	case "DELETE":
 		if nodeId != "" {
@@ -40,7 +43,7 @@ func (s *HTTPServer) NodeEndpoint(resp http.ResponseWriter, req *http.Request) (
 	}
 }
 
-func (s *HTTPServer) getNode(resp http.ResponseWriter, req *http.Request, nodeId string) (*sched.Node, error) {
+func (s *HTTPServer) getNode(resp http.ResponseWriter, req *http.Request, nodeId string) (*structs.Node, error) {
 	node, err := s.resourceManager.GetNode(nodeId)
 	if err != nil {
 		return nil, fmt.Errorf("nodeId:%v is not exist.", nodeId)
@@ -48,7 +51,7 @@ func (s *HTTPServer) getNode(resp http.ResponseWriter, req *http.Request, nodeId
 	return node, nil
 }
 
-func (s *HTTPServer) listNode(resp http.ResponseWriter, req *http.Request) ([]*sched.Node, error) {
+func (s *HTTPServer) listNode(resp http.ResponseWriter, req *http.Request) ([]*structs.Node, error) {
 	nodes, err := s.resourceManager.GetNodeList()
 	if err != nil {
 		return nil, fmt.Errorf("list node failed, cause %v", err)
@@ -57,59 +60,51 @@ func (s *HTTPServer) listNode(resp http.ResponseWriter, req *http.Request) ([]*s
 }
 
 func (s *HTTPServer) modifyNode(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
+	meta, err := parseNodeMeta(req)
+	if err != nil {
+		return nil, fmt.Errorf("parse NodeMeta from request failed, cause: %v", err)
+	}
 	// todo
+	// nodeId := req.
+	var nodeId string
+	errModify := s.resourceManager.ModifyMeta(nodeId, meta)
+	if errModify != nil {
+		return nil, fmt.Errorf("RM modify node meta failed, cause: %v", errModify)
+	}
 	return nil, nil
 }
 
 func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
-	buf := bytes.NewBuffer(nil)
-	if _, err := io.Copy(buf, req.Body); err != nil {
-		return nil, err
+	meta, err := parseNodeMeta(req)
+	if err != nil {
+		return nil, fmt.Errorf("parse NodeMeta from request failed, cause: %v", err)
 	}
-	var meta *sched.NodeMeta
-	if err := json.Unmarshal(buf.Bytes(), meta); err != nil {
-		return nil, fmt.Errorf("json unmarshal node meta failed: %v", err)
-	}
-
-	err := s.resourceManager.AddMeta(meta)
+	nodeId, err := s.resourceManager.AddMeta(meta)
 	if err != nil {
 		log.Warnf("RM add node meta failed, cause:%v", err)
 		return nil, fmt.Errorf("RM add node meta failed, cause: %v", err)
 	}
-	return nil, nil
+	log.Infof("node id: %v", nodeId)
+	return nodeId, nil
 }
 
 func (s *HTTPServer) deleteNode(resp http.ResponseWriter, req *http.Request, nodeId string) (interface{}, error) {
-	// todo
-	return nil, nil
+	err := s.resourceManager.RemoveNode(nodeId)
+	if err != nil {
+		log.Warnf("RM remove node failed, cause:%v", err)
+		return nil, fmt.Errorf("RM remove node failed, cause: %v", err)
+	}
+	return "SUCCESS", nil
 }
 
-/*
-func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
-	// Copy the value
+func parseNodeMeta(req *http.Request) (*structs.NodeMeta, error) {
 	buf := bytes.NewBuffer(nil)
 	if _, err := io.Copy(buf, req.Body); err != nil {
 		return nil, err
 	}
-	iplist := strings.Split(string(buf.Bytes()), ",")
-
-	machineDao, err := s.storeManager.GetMachineDaoForPool()
-	if err != nil {
-		return nil, err
+	var meta *structs.NodeMeta
+	if err := json.Unmarshal(buf.Bytes(), &meta); err != nil {
+		return nil, fmt.Errorf("json unmarshal node meta failed: %v", err)
 	}
-	defer s.storeManager.PutMachineDaoForPool(machineDao)
-
-	for _, ip := range iplist {
-		m := &store.Machine{
-			Ip:         ip,
-			CreateTime: time.Now(),
-		}
-		if err := machineDao.Set(m); err != nil {
-			return nil, err
-		}
-	}
-	return map[string]interface{}{
-		"Success": len(iplist),
-	}, nil
+	return meta, nil
 }
-*/

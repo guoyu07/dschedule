@@ -8,6 +8,7 @@ import (
 	"flag"
 	//"fmt"
 	log "github.com/omidnikta/logrus"
+	"github.com/weibocom/dschedule/api"
 	"github.com/weibocom/dschedule/scheduler"
 	//"time"
 )
@@ -43,7 +44,7 @@ func main() {
 		*storage, storageKeyPrefix, *port, *debug, *uiDir)
 
 	// for compile test
-	resourceManager, _ = scheduler.NewResourceManager()
+	resourceManager, _ := scheduler.NewResourceManager()
 
 	server, err := api.NewHTTPServer("0.0.0.0", *port, *uiDir, *debug, resourceManager)
 	if err != nil {
