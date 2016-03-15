@@ -79,6 +79,7 @@ func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (inter
 	if err != nil {
 		return nil, fmt.Errorf("parse NodeMeta from request failed, cause: %v", err)
 	}
+	log.Debugf("resource :%v", s.resourceManager)
 	nodeId, err := s.resourceManager.AddMeta(meta)
 	if err != nil {
 		log.Warnf("RM add node meta failed, cause:%v", err)
