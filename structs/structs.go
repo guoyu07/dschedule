@@ -13,13 +13,13 @@ const (
 	ContainerNetworkNone      = "NONE"
 	ContainerNetworkContainer = "CONTAINER"
 
-	TaskTypeProd      = "PROD"
-	TaskTypeNonProd   = "NON-PROD"
-	TaskTypeAuxiliary = "AUXILIARY"
+	ServiceTypeProd      = "PROD"
+	ServiceTypeNonProd   = "NON-PROD"
+	ServiceTypeAuxiliary = "AUXILIARY"
 
-	TaskStrategyAuto    = "AUTO"
-	TaskStrategyCrontab = "CRONTAB"
-	TaskStrategyStable  = "STABLE"
+	ServiceStrategyAuto    = "AUTO"
+	ServiceStrategyCrontab = "CRONTAB"
+	ServiceStrategyStable  = "STABLE"
 )
 
 type Node struct {
@@ -71,11 +71,11 @@ type Container struct {
 	Command string
 }
 
-type Task struct {
-	TaskId string
+type Service struct {
+	ServiceId string
 
 	//任务类型，可选值prod，non-prod, auxiliary
-	TaskType string
+	ServiceType string
 
 	//任务执行的策略，可选值AUTO，CRONTAB，STABLE
 	Strategy string
