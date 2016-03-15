@@ -2,46 +2,51 @@ package scheduler
 
 import (
 	"github.com/samalba/dockerclient"
+	"github.com/weibocom/dschedule/structs"
 )
 
 type Deployer struct {
-	docker *dockerclient.DockerClient
+	docker      *dockerclient.DockerClient
+	container   *structs.Container
+	containerId string
 }
 
-func NewDeployer(host string) (*Deployer, error) {
+func NewDeployer(host string, container *structs.Container) (*Deployer, error) {
 	docker, err := dockerclient.NewDockerClient(host, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &Deployer{
-		docker: docker,
+		docker:    docker,
+		container: container,
 	}, nil
 }
 
-func (this *Deployer) Start(image, cmd, name string) (string, error) {
+func (this *Deployer) Start() error {
 	// Create a container
 	containerConfig := &dockerclient.ContainerConfig{
-		Image:       image,
-		Cmd:         []string{cmd},
+		Image:       this.container.Image,
+		Cmd:         []string{this.container.Command},
 		AttachStdin: true,
 		Tty:         true,
 	}
-	containerId, err := this.docker.CreateContainer(containerConfig, name, nil)
+	containerId, err := this.docker.CreateContainer(containerConfig, "", nil)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// Start the container
 	hostConfig := &dockerclient.HostConfig{}
 	err = this.docker.StartContainer(containerId, hostConfig)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return containerId, nil
+	this.containerId = containerId
+	return nil
 }
 
-func (this *Deployer) Stop(containerId string) error {
+func (this *Deployer) Stop() error {
 	// Stop the container (with 5 seconds timeout)
-	this.docker.StopContainer(containerId, 5) // 5 -> timeout
+	this.docker.StopContainer(this.containerId, 5) // 5 -> timeout
 	return nil
 }

@@ -7,10 +7,15 @@ import (
 	"sync"
 )
 
+const (
+	MaxFailed = 3
+)
+
 type ResourceManager struct {
-	allNodes  []*structs.Node //map[string]*structs.Node
-	freeNodes []*structs.Node
-	mutex     sync.Mutex
+	allNodes    []*structs.Node //map[string]*structs.Node
+	freeNodes   []*structs.Node
+	failedNodes []*structs.Node
+	mutex       sync.Mutex
 }
 
 func NewResourceManager() (*ResourceManager, error) {
@@ -103,8 +108,13 @@ func (this *ResourceManager) AllocNodes(num int /*, rules*/) ([]*structs.Node, e
 func (this *ResourceManager) ReturnNodes(nodes []*structs.Node) error {
 	for _, node := range nodes {
 		node.Used = false
+		if node.Failed < MaxFailed {
+			this.freeNodes = append(this.freeNodes, node)
+		} else {
+			log.Warnf("Node '%s' IP '%s' Failed have reached %d, insert into failed queue", node.NodeId, node.Meta.IP, node.Failed)
+			this.failedNodes = append(this.failedNodes, node)
+		}
 	}
-	this.freeNodes = append(this.freeNodes, nodes...)
 	// TODO store
 	return nil
 }
