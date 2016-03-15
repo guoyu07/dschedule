@@ -124,7 +124,7 @@ func (s *HTTPServer) registerHandlers(enableDebug bool) {
 	// s.mux.HandleFunc("/machine/", s.wrap(s.MachineEndpoint))
 
 	s.mux.HandleFunc("/node/", s.wrap(s.NodeEndpoint))
-	s.mux.HandleFunc("/task/", s.wrap(s.TaskEndpoint))
+	s.mux.HandleFunc("/service/", s.wrap(s.ServiceEndpoint))
 
 	if enableDebug {
 		s.mux.HandleFunc("/debug/pprof/", pprof.Index)
