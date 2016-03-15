@@ -52,6 +52,7 @@ func (this *Scheduler) Register(service *structs.Service) (bool, error) {
 }
 
 func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
+	log.Infoln("invoke scheduler Add.......")
 	// check if > max
 	scheduleService := this.services[serviceId]
 	if scheduleService == nil {

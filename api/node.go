@@ -75,13 +75,13 @@ func (s *HTTPServer) modifyNode(resp http.ResponseWriter, req *http.Request, nod
 func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (string, error) {
 	meta, err := parseNodeMeta(req)
 	if err != nil {
-		return nil, fmt.Errorf("parse NodeMeta from request failed, cause: %v", err)
+		return "", fmt.Errorf("parse NodeMeta from request failed, cause: %v", err)
 	}
 	log.Debugf("resource :%v", s.resourceManager)
 	nodeId, err := s.resourceManager.AddMeta(meta)
 	if err != nil {
 		log.Warnf("RM add node meta failed, cause:%v", err)
-		return nil, fmt.Errorf("RM add node meta failed, cause: %v", err)
+		return "", fmt.Errorf("RM add node meta failed, cause: %v", err)
 	}
 	log.Infof("node id: %v", nodeId)
 	return nodeId, nil
@@ -91,7 +91,7 @@ func (s *HTTPServer) deleteNode(resp http.ResponseWriter, req *http.Request, nod
 	err := s.resourceManager.RemoveNode(nodeId)
 	if err != nil {
 		log.Warnf("RM remove node failed, cause:%v", err)
-		return nil, fmt.Errorf("RM remove node failed, cause: %v", err)
+		return "FAILED", fmt.Errorf("RM remove node failed, cause: %v", err)
 	}
 	return "SUCCESS", nil
 }

@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	// "strconv"
+	"bytes"
+	"encoding/json"
+	log "github.com/omidnikta/logrus"
+	"github.com/weibocom/dschedule/structs"
+	"io"
 	"strings"
 )
 
@@ -22,6 +27,7 @@ func (s *HTTPServer) ServiceEndpoint(resp http.ResponseWriter, req *http.Request
 		if serviceId != "" {
 			return s.modifyService(resp, req, serviceId)
 		}
+		log.Infoln("post, add service.....")
 		return s.addService(resp, req)
 	case "DELETE":
 		// Pull out the node id,
@@ -38,7 +44,7 @@ func (s *HTTPServer) ServiceEndpoint(resp http.ResponseWriter, req *http.Request
 }
 
 func (s *HTTPServer) getService(resp http.ResponseWriter, req *http.Request, serviceId string) (*structs.Service, error) {
-	service, err := s.serviceManager.getService(serviceId)
+	service, err := s.serviceManager.GetService(serviceId)
 	if err != nil {
 		return nil, fmt.Errorf("ServiceManager get service failed, cause: %v", err)
 	}
@@ -46,7 +52,7 @@ func (s *HTTPServer) getService(resp http.ResponseWriter, req *http.Request, ser
 }
 
 func (s *HTTPServer) listService(resp http.ResponseWriter, req *http.Request) ([]*structs.Service, error) {
-	services, err := s.serviceManager.getServiceList()
+	services, err := s.serviceManager.GetServiceList()
 	if err != nil {
 		return nil, fmt.Errorf("ServiceManager list service failed, cause: %v", err)
 	}
@@ -60,26 +66,27 @@ func (s *HTTPServer) modifyService(resp http.ResponseWriter, req *http.Request, 
 	}
 
 	// TODO modify service
-	s.serviceManager.modifyService(service, serviceId)
+	s.serviceManager.ModifyService(serviceId, service)
 	return nil, nil
 }
 
-func (s *HTTPServer) addService(resp http.ResponseWriter, req *http.Request) (*structs.Service, error) {
+func (s *HTTPServer) addService(resp http.ResponseWriter, req *http.Request) (string, error) {
 	service, err := parseService(req)
 	if err != nil {
-		return nil, fmt.Errorf("parse service from request failed, cause: %v", err)
+		return "", fmt.Errorf("parse service from request failed, cause: %v", err)
 	}
-	mfService, err := s.serviceManager.addService(service, serviceId)
+	log.Infof("add service :%v", service)
+	mfService, err := s.serviceManager.AddService(service)
 	if err != nil {
-		return nil, fmt.Errorf("ServiceManager add service failed, cause: %v", err)
+		return "", fmt.Errorf("ServiceManager add service failed, cause: %v", err)
 	}
 	return mfService, nil
 }
 
 func (s *HTTPServer) deleteService(resp http.ResponseWriter, req *http.Request, serviceId string) (string, error) {
-	ok, err := s.serviceManager.deleteService(serviceId)
+	ok, err := s.serviceManager.DeleteService(serviceId)
 	if err != nil {
-		return nil, fmt.Errorf("ServiceManager delete service failed, cause: %v", err)
+		return "", fmt.Errorf("ServiceManager delete service failed, cause: %v", err)
 	}
 	return ok, nil
 }

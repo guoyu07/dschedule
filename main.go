@@ -47,7 +47,7 @@ func main() {
 	// for compile test
 	resourceManager, _ := scheduler.NewResourceManager()
 
-	serviceManager, _ := strategy.NewServiceManager()
+	serviceManager, _ := strategy.NewServiceManager("CRONTAB", resourceManager)
 
 	server, err := api.NewHTTPServer("0.0.0.0", *port, *uiDir, *debug, resourceManager, serviceManager)
 	if err != nil {

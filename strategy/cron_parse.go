@@ -1,4 +1,4 @@
-package crontab
+package strategy
 
 import (
 	"fmt"
