@@ -1,23 +1,27 @@
 package scheduler
 
 import (
+	"fmt"
 	"github.com/samalba/dockerclient"
 	"github.com/weibocom/dschedule/structs"
 )
 
 type Deployer struct {
 	docker      *dockerclient.DockerClient
+	node        *structs.Node
 	container   *structs.Container
 	containerId string
 }
 
-func NewDeployer(host string, container *structs.Container) (*Deployer, error) {
+func NewDeployer(node *structs.Node, dockerPort int, container *structs.Container) (*Deployer, error) {
+	host := fmt.Sprintf("%s:%d", node.Meta.IP, dockerPort)
 	docker, err := dockerclient.NewDockerClient(host, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &Deployer{
 		docker:    docker,
+		node:      node,
 		container: container,
 	}, nil
 }
