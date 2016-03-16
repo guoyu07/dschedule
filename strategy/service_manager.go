@@ -16,7 +16,7 @@ type ServiceManager struct {
 
 func NewServiceManager(strategyName string, resourceManager *scheduler.ResourceManager) (*ServiceManager, error) {
 	// TODO scheduler dockerPort
-	scheduler, _ := scheduler.NewScheduler(resourceManager, 0)
+	scheduler, _ := scheduler.NewScheduler(resourceManager, 4243)
 	strategy, _ := NewStrategy(strategyName)
 
 	return &ServiceManager{

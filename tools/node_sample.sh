@@ -15,7 +15,7 @@ curl -X POST -d '{
 		"hostname" : "",
 		"os" 	   : ""
 	}
-}' "http://$host:$ip/node"
+}' "http://$host:$ip/node/"
 
 
 # 变更节点信息

@@ -7,7 +7,6 @@ import (
 	"github.com/weibocom/dschedule/scheduler"
 	"github.com/weibocom/dschedule/structs"
 	"reflect"
-	"time"
 )
 
 type CrontabStrategy struct {
@@ -73,10 +72,17 @@ func (crontabStrategy *CrontabStrategy) Applying(service *structs.Service, sched
 
 		// TODO handle registerId
 		// 传入的InstanceNum应该经过计算，现在测试链路直接传入原值
+		// crontabStrategy.cronObject.AddFunc(expression, func() {
+		// 	scheduler.Add(service.ServiceId, config.InstanceNum)
+		// })
+
 		crontabStrategy.cronObject.AddFunc(expression, func() {
-			scheduler.Add(service.ServiceId, config.InstanceNum)
+			num, err := scheduler.Remove(service.ServiceId, 1)
+			if err != nil {
+				log.Errorf("scheduler remove service:%v failed, cause: %v", service.ServiceId, err)
+			}
+			log.Infof("scheduler remove success, num:%v", num)
 		})
 	}
-	time.Sleep(time.Second * 10)
 	return nil
 }

@@ -13,13 +13,13 @@ import (
 
 func TestNodeEndpoint_ADD(t *testing.T) {
 	srv := MakeHTTPServer(t)
-	defer srv.Shutdown()
+	// defer srv.Shutdown()
 	// if err != nil {
 	// 	t.Fatalf("create httpserver failed, cause:%v", err)
 	// }
 	meta := &structs.NodeMeta{
 		Name:     "yf-remind-1",
-		IP:       "10.75.24.12",
+		IP:       "10.229.88.91",
 		CPU:      24,
 		MemoryMB: 10240,
 		DiskMB:   102400,
@@ -43,6 +43,7 @@ func TestNodeEndpoint_ADD(t *testing.T) {
 	time.Sleep(time.Second * 1)
 }
 
+/*
 func TestNodeEndpoint_GET(t *testing.T) {
 	TestNodeEndpoint_ADD(t)
 	time.Sleep(time.Second * 1)
@@ -78,3 +79,4 @@ func TestNodeEndpoint_REMOVE(t *testing.T) {
 	}
 	t.Logf("remove node success, ret: %v", ret)
 }
+*/
