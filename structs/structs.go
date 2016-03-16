@@ -69,7 +69,7 @@ type Container struct {
 	Volumes map[string]string
 
 	// 端口映射，key为container的端口，value为host中的端口
-	PortMapping map[string]string
+	PortMapping map[int]int
 
 	// 容器启动时需要执行的命令
 	Command string
