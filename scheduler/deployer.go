@@ -5,6 +5,7 @@ import (
 	"github.com/samalba/dockerclient"
 	"github.com/weibocom/dschedule/structs"
 	"strconv"
+	"strings"
 )
 
 type Deployer struct {
@@ -34,7 +35,7 @@ func (this *Deployer) Start() error {
 	portBindings := make(map[string][]dockerclient.PortBinding)
 	for containerPort, hostPort := range this.container.PortMapping {
 		key := fmt.Sprintf("%d/tcp", containerPort)
-		exposedPorts[key] = struct{}{} // TODO may not ok
+		exposedPorts[key] = struct{}{}
 		portBindings[key] = []dockerclient.PortBinding{
 			dockerclient.PortBinding{
 				//HostIp:   "0.0.0.0",
@@ -42,11 +43,27 @@ func (this *Deployer) Start() error {
 			},
 		}
 	}
+
+	var envs []string
+	for key, val := range this.container.Env {
+		envs = append(envs, fmt.Sprintf("%s=%s", key, val))
+	}
+
+	volumes := make(map[string]struct{})
+	var binds []string
+	for constainerFile, hostFile := range this.container.Volumes {
+		volumes[constainerFile] = struct{}{}
+		binds = append(binds, fmt.Sprintf("%s:%s", hostFile, constainerFile))
+		//volumes[constainerFile] = struct{}{hostFile}
+	}
+
 	// Create a container
 	containerConfig := &dockerclient.ContainerConfig{
 		Image:        this.container.Image,
-		Cmd:          []string{this.container.Command},
+		Env:          envs,
+		Volumes:      volumes,
 		ExposedPorts: exposedPorts,
+		Cmd:          []string{this.container.Command},
 
 		AttachStdin: true,
 		Tty:         true,
@@ -58,8 +75,9 @@ func (this *Deployer) Start() error {
 
 	// Start the container
 	hostConfig := &dockerclient.HostConfig{
-		NetworkMode:  this.container.Network,
+		Binds:        binds,
 		PortBindings: portBindings,
+		NetworkMode:  strings.ToLower(this.container.Network),
 	}
 	err = this.docker.StartContainer(containerId, hostConfig)
 	if err != nil {
