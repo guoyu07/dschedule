@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/omidnikta/logrus"
 	"github.com/weibocom/dschedule/structs"
+	"github.com/weibocom/dschedule/util"
 	"sync"
 )
 
@@ -26,7 +27,7 @@ func NewResourceManager() (*ResourceManager, error) {
 
 func (this *ResourceManager) AddMeta(meta *structs.NodeMeta) (string, error) {
 	node := &structs.Node{
-		NodeId:    fmt.Sprintf("%s-random-something-else", meta.IP),
+		NodeId:    fmt.Sprintf("%s-%s", meta.IP, util.GenerateUUID()),
 		Used:      false,
 		Reachable: false,
 		Meta:      meta,
@@ -34,7 +35,7 @@ func (this *ResourceManager) AddMeta(meta *structs.NodeMeta) (string, error) {
 	this.allNodes = append(this.allNodes, node)
 	this.freeNodes = append(this.freeNodes, node)
 	// TODO store
-	log.Infof("node info is : ", node)
+	//log.Infof("node info is : ", node)
 	return node.NodeId, nil
 }
 
