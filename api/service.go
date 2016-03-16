@@ -22,11 +22,8 @@ func (s *HTTPServer) ServiceEndpoint(resp http.ResponseWriter, req *http.Request
 		}
 		return s.listService(resp, req)
 	case "PUT":
-		fallthrough
+		return s.modifyService(resp, req)
 	case "POST":
-		if serviceId != "" {
-			return s.modifyService(resp, req, serviceId)
-		}
 		log.Infoln("post, add service.....")
 		return s.addService(resp, req)
 	case "DELETE":
@@ -59,15 +56,18 @@ func (s *HTTPServer) listService(resp http.ResponseWriter, req *http.Request) ([
 	return services, nil
 }
 
-func (s *HTTPServer) modifyService(resp http.ResponseWriter, req *http.Request, serviceId string) (*structs.Service, error) {
+func (s *HTTPServer) modifyService(resp http.ResponseWriter, req *http.Request) (bool, error) {
 	service, err := parseService(req)
 	if err != nil {
-		return nil, fmt.Errorf("parse service from request failed, cause: %v", err)
+		return false, fmt.Errorf("parse service from request failed, cause: %v", err)
 	}
 
 	// TODO modify service
-	s.serviceManager.ModifyService(serviceId, service)
-	return nil, nil
+	ok, err := s.serviceManager.ModifyService(service.ServiceId, service)
+	if err != nil {
+		return false, fmt.Errorf("ServiceManager modify service failed, cause: %v", err)
+	}
+	return ok, nil
 }
 
 func (s *HTTPServer) addService(resp http.ResponseWriter, req *http.Request) (string, error) {

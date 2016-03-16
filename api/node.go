@@ -23,11 +23,8 @@ func (s *HTTPServer) NodeEndpoint(resp http.ResponseWriter, req *http.Request) (
 		}
 		return s.listNode(resp, req)
 	case "PUT":
-		fallthrough
+		return s.modifyNode(resp, req, nodeId)
 	case "POST":
-		if nodeId != "" {
-			return s.modifyNode(resp, req, nodeId)
-		}
 		log.Infoln("add node")
 		return s.addNode(resp, req)
 	case "DELETE":

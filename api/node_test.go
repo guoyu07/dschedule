@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func TestNodeEndpoint_ADD(t *testing.T) {
+func TNodeEndpoint_ADD(t *testing.T) {
 	srv := MakeHTTPServer(t)
 	// defer srv.Shutdown()
 	// if err != nil {

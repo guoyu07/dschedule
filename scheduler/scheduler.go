@@ -150,7 +150,7 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 	}
 
 	if len(scheduleService.deployers) <= scheduleService.service.Dedicated {
-		return 0, nil
+		return 0, fmt.Errorf("scheduler remove failed, cause deployers number < Dedicated num, serviceId:%v", serviceId)
 	}
 
 	scheduleService.mutex.Lock()

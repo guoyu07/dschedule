@@ -1,7 +1,7 @@
 package strategy
 
 import (
-	// "fmt"
+	"fmt"
 	log "github.com/omidnikta/logrus"
 	"github.com/robfig/cron"
 	"github.com/weibocom/dschedule/scheduler"
@@ -70,34 +70,27 @@ func (crontabStrategy *CrontabStrategy) Applying(service *structs.Service, sched
 			continue
 		}
 
-		// TODO handle registerId
-		// 传入的InstanceNum应该经过计算，现在测试链路直接传入原值
-		// crontabStrategy.cronObject.AddFunc(expression, func() {
-		// 	scheduler.Add(service.ServiceId, config.InstanceNum)
-		// })
-
 		crontabStrategy.cronObject.AddFunc(expression, func() {
-
+			log.Infoln("start run cron job....")
 			onlineNum, err := crontabStrategy.getServiceOnlineInstanceNum(service.ServiceId, scheduler)
 			if err != nil {
-				log.Errorf("scheduler get service:%v status faield, cause: %v", serviceId, err)
-				continue
+				log.Errorf("scheduler get service:%v status faield, cause: %v", service.ServiceId, err)
+				return
 			}
+			log.Infof("onlineNum:%v, config.InstanceNum:%v", onlineNum, config.InstanceNum)
 			if onlineNum > config.InstanceNum {
 				num, err := scheduler.Remove(service.ServiceId, onlineNum-config.InstanceNum)
 				if err != nil {
 					log.Errorf("scheduler remove service:%v failed, cause: %v", service.ServiceId, err)
 				}
-				log.Infof("scheduler remove success, num:%v", num)
+				log.Infof("scheduler remove success, remove instance num:%v", num)
 			} else if onlineNum < config.InstanceNum {
-				crontabStrategy.cronObject.AddFunc(expression, func() {
-					_, err := scheduler.Add(service.ServiceId, config.InstanceNum-onlineNum)
-					if err != nil {
-						log.Errorf("scheduler add service:%v failed, cause: %v", service.ServiceId, err)
-					}
-					log.Infof("scheduler add service:%v success, add instance num:%v, online instance num:%v", service.ServiceId,
-						config.InstanceNum-onlineNum, config.InstanceNum)
-				})
+				_, err := scheduler.Add(service.ServiceId, config.InstanceNum-onlineNum)
+				if err != nil {
+					log.Errorf("scheduler add service:%v failed, cause: %v", service.ServiceId, err)
+				}
+				log.Infof("scheduler add service:%v success, add instance num:%v, online instance num:%v", service.ServiceId,
+					config.InstanceNum-onlineNum, config.InstanceNum)
 			} else {
 				log.Warnf("crontab strategy check online instance num equals config.InstanceNum, onlineInstanceNum:%v", onlineNum)
 			}
