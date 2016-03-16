@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"fmt"
+	log "github.com/omidnikta/logrus"
 	"github.com/weibocom/dschedule/scheduler"
 	"github.com/weibocom/dschedule/structs"
 )
@@ -35,6 +36,7 @@ func (serviceManager *ServiceManager) GetService(serviceId string) (*structs.Ser
 func (serviceManager *ServiceManager) AddService(service *structs.Service) (string, error) {
 	serviceManager.services[service.ServiceId] = service
 
+	serviceManager.setServiceDefaultProperties(service)
 	ok, err := serviceManager.scheduler.Register(service)
 	if !ok {
 		return "", fmt.Errorf("scheduler register a service failed, cause: %v", err)
@@ -48,14 +50,50 @@ func (serviceManager *ServiceManager) AddService(service *structs.Service) (stri
 	return service.ServiceId, nil
 }
 
-func (serviceManager *ServiceManager) ModifyService(serviceId string, service *structs.Service) (*structs.Service, error) {
-	return nil, nil
+func (serviceManager *ServiceManager) ModifyService(serviceId string, service *structs.Service) (bool, error) {
+	serviceManager.setServiceDefaultProperties(service)
+	ok, err := serviceManager.scheduler.Register(service)
+	if !ok {
+		return false, fmt.Errorf("scheduler register a service failed, cause: %v", err)
+	}
+	if _, ok := serviceManager.services[serviceId]; ok {
+		serviceManager.services[serviceId] = service
+		err := serviceManager.strategy.Applying(service, serviceManager.scheduler)
+		if err != nil {
+			return false, fmt.Errorf("strategy applyling service failed, cause : %v", err)
+		}
+	}
+	log.Infof("modify service, service info: %v", service)
+	return true, nil
 }
 
 func (serviceManager *ServiceManager) DeleteService(serviceId string) (string, error) {
+	delete(serviceManager.services, serviceId)
 	return "", nil
 }
 
 func (serviceManager *ServiceManager) GetServiceList() ([]*structs.Service, error) {
 	return nil, nil
+}
+
+func (serviceManager *ServiceManager) setServiceDefaultProperties(service *structs.Service) {
+	if service.Priority == 0 {
+		service.Priority = 3
+	}
+	container := service.Container
+	if container == nil {
+		container = &structs.Container{
+			Type:    structs.ContainerTypeDocker,
+			Network: structs.ContainerNetworkHost,
+		}
+		service.Container = container
+	} else {
+		if container.Type == "" {
+			container.Type = structs.ContainerTypeDocker
+		}
+		if container.Network == "" {
+			container.Network = structs.ContainerNetworkHost
+		}
+	}
+
 }

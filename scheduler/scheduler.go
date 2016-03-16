@@ -142,8 +142,10 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 		return 0, fmt.Errorf("serviceId %d not Register before", serviceId)
 	}
 
+	log.Infof("deployers:%v, dedicated:%v, reduceNum:%v", len(scheduleService.deployers), scheduleService.service.Dedicated, num)
+
 	if len(scheduleService.deployers) <= scheduleService.service.Dedicated {
-		return 0, nil
+		return 0, fmt.Errorf("scheduler remove failed, cause deployers number < Dedicated num, serviceId:%v", serviceId)
 	}
 
 	scheduleService.mutex.Lock()
@@ -151,7 +153,6 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 	if num < 0 { // remove all when negative num
 		reduceNum = len(scheduleService.deployers)
 	}
-	log.Infof("deployers:%v, dedicated:%v, reduceNum:%v", len(scheduleService.deployers), scheduleService.service.Dedicated, reduceNum)
 	elasticNum := len(scheduleService.deployers) - scheduleService.service.Dedicated
 	if reduceNum > elasticNum {
 		reduceNum = elasticNum // make sure the Dedicated
