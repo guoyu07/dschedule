@@ -10,7 +10,7 @@ curl -X POST -d '{
 	"serviceType"		:	"prod",
 	"strategyName" : "crontab",
 	"strategyConfig":[{
-		"time":"",
+		"time":"11:12",
 		"instanceNum":1
 	}],
 	"priority"		:	5,
@@ -24,12 +24,12 @@ curl -X POST -d '{
 
 
 #变更服务
-curl -X POST -d '{
+curl -X PUT -d '{
 	"serviceId"		: 	"test-redis",
 	"serviceType"		:	"prod",
 	"strategyName" : "crontab",
 	"strategyConfig":[{
-		"time":"",
+		"time":"23:10",
 		"instanceNum":1
 	}],
 	"priority"		:	5,
