@@ -65,11 +65,28 @@ func (this *Deployer) Start() error {
 		Env:          envs,
 		Volumes:      volumes,
 		ExposedPorts: exposedPorts,
-		Cmd:          []string{this.container.Command},
 
 		AttachStdin: true,
 		Tty:         true,
 	}
+	// DEBUGGED: System error: exec: "": executable file not found in $PATH
+	if this.container.Command != "" {
+		containerConfig.Cmd = []string{this.container.Command}
+	}
+	//images, err := this.docker.SearchImages(containerConfig.Image, "", nil)
+	//if err != nil {
+	//	return err
+	//}
+	//fmt.Println("images:", images)
+	//if len(images) == 0 {
+	//fmt.Println("pulling ", containerConfig.Image)
+
+	// DEBUGGED: "Image not found"
+	err := this.docker.PullImage(containerConfig.Image, nil)
+	if err != nil {
+		return err
+	}
+	//}
 	//log.Infof("deployer create container: %v", containerConfig)
 	containerId, err := this.docker.CreateContainer(containerConfig, "", nil)
 	if err != nil {

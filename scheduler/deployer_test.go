@@ -32,7 +32,7 @@ func TestDeployer(t *testing.T) {
 	container := &structs.Container{
 		Type: "docker",
 
-		Image: "docker.io/redis:2.8",
+		Image: "registry.api.weibo.com/liubin8/nginx:latest",
 
 		//环境变量
 		Env: map[string]string{
@@ -49,11 +49,11 @@ func TestDeployer(t *testing.T) {
 		Network: "BRIDGE",
 		// 端口映射，key为container的端口，value为host中的端口
 		PortMapping: map[int]int{
-			6379: 6379,
+			80: 100,
 		},
 
 		// 容器启动时需要执行的命令
-		Command: "redis-server",
+		Command: "", //"redis-server",
 	}
 
 	deployer, err := NewDeployer(node, dockerPort, container)
@@ -66,7 +66,7 @@ func TestDeployer(t *testing.T) {
 		t.Fatalf("Deployer start failed: %v", err)
 		return
 	}
-	err = deployer.Stop()
+	//err = deployer.Stop()
 	if err != nil {
 		t.Fatalf("Deployer stop failed: %v", err)
 		return
