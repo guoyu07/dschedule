@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/omidnikta/logrus"
 	"github.com/weibocom/dschedule/structs"
+	"github.com/weibocom/dschedule/util"
 	"sync"
 )
 
@@ -19,6 +20,7 @@ type ResourceManager struct {
 }
 
 func NewResourceManager() (*ResourceManager, error) {
+	// TODO ConstructFromConsul for allNodes, freeNodes, failedNodes
 	return &ResourceManager{
 	//usedNodes: make(map[string]*Node),
 	}, nil
@@ -26,15 +28,15 @@ func NewResourceManager() (*ResourceManager, error) {
 
 func (this *ResourceManager) AddMeta(meta *structs.NodeMeta) (string, error) {
 	node := &structs.Node{
-		NodeId:    fmt.Sprintf("%s-random-something-else", meta.IP),
+		NodeId:    fmt.Sprintf("%s-%s", meta.IP, util.GenerateUUID()),
 		Used:      false,
 		Reachable: false,
 		Meta:      meta,
 	}
 	this.allNodes = append(this.allNodes, node)
 	this.freeNodes = append(this.freeNodes, node)
-	// TODO store
-	log.Infof("node info is : ", node)
+	// TODO StoreToConsul
+	//log.Infof("node info is : ", node)
 	return node.NodeId, nil
 }
 
@@ -42,7 +44,7 @@ func (this *ResourceManager) ModifyMeta(nodeId string, meta *structs.NodeMeta) e
 	for _, node := range this.allNodes {
 		if node.NodeId == nodeId {
 			node.Meta = meta
-			// TODO store
+			// TODO StoreToConsul
 			return nil
 		}
 	}
@@ -66,7 +68,7 @@ func (this *ResourceManager) RemoveNode(nodeId string) error {
 		this.allNodes = append(this.allNodes, tNodes[idx+1:]...)
 	}
 
-	// TODO store
+	// TODO StoreToConsul
 	return nil
 }
 
@@ -99,8 +101,8 @@ func (this *ResourceManager) AllocNodes(num int /*, rules*/) ([]*structs.Node, e
 
 	for _, node := range allocs {
 		node.Used = true
+		// TODO StoreToConsul
 	}
-	// TODO store
 
 	return allocs, nil
 }
@@ -114,7 +116,7 @@ func (this *ResourceManager) ReturnNodes(nodes []*structs.Node) error {
 			log.Warnf("Node '%s' IP '%s' Failed have reached %d, insert into failed queue", node.NodeId, node.Meta.IP, node.Failed)
 			this.failedNodes = append(this.failedNodes, node)
 		}
+		// TODO StoreToConsul
 	}
-	// TODO store
 	return nil
 }

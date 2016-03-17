@@ -28,6 +28,7 @@ type Scheduler struct {
 }
 
 func NewScheduler(resourceManager *ResourceManager, dockerPort int) (*Scheduler, error) {
+	// TODO ConstructFromConsul for  services and priorityServices
 	return &Scheduler{
 		services:         make(map[string]*ScheduleService),
 		priorityServices: make([]map[string]*ScheduleService, structs.MaxPriority+1),
@@ -47,6 +48,7 @@ func (this *Scheduler) Register(service *structs.Service) (bool, error) {
 		service: service,
 	}
 	this.services[service.ServiceId] = scheduleService
+	// TODO StoreToConsul
 
 	// insert into priority map, checked service.Priority at the beginning of this func
 	if this.priorityServices[service.Priority] == nil {
@@ -58,7 +60,7 @@ func (this *Scheduler) Register(service *structs.Service) (bool, error) {
 }
 
 func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
-	log.Infof("invoke scheduler Add....... serviceId:%v, num:%v", serviceId, num)
+	//log.Infof("invoke scheduler Add....... serviceId:%v, num:%v", serviceId, num)
 	// check if > max
 	scheduleService := this.services[serviceId]
 	if scheduleService == nil {
@@ -80,6 +82,7 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 				return
 			}
 
+			// TODO continue last deploying when process restart, ???tcc????
 			// deploy
 			var deployers []*Deployer
 			for _, node := range nodes {
@@ -98,6 +101,9 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 					continue
 				}
 
+				// TODO StoreToConsul for new node-container in this service
+				// TODO tell resourceManager, scheduler have used the resource, esle rm will reback the resource
+				log.Infof("Started serviceId:%s, nodeId:%s, containerId:%s", serviceId, deployer.node.NodeId, deployer.containerId)
 				node.Failed = 0
 				deployers = append(deployers, deployer)
 			}
@@ -105,6 +111,7 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 			scheduleService.deployers = append(scheduleService.deployers, deployers...)
 			scheduleService.mutex.Unlock()
 
+			log.Infof("needRequestNum=%d, available deployer num=%d", needRequestNum, len(deployers))
 			needRequestNum -= len(deployers)
 			// remove low priority service nodes
 			if len(deployers) < needRequestNum {
@@ -136,7 +143,7 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 }
 
 func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
-	log.Infof("deploy remove ...... serviceId:%v, num:%v", serviceId, num)
+	//log.Infof("deploy remove ...... serviceId:%v, num:%v", serviceId, num)
 	scheduleService := this.services[serviceId]
 	if scheduleService == nil {
 		return 0, fmt.Errorf("serviceId %d not Register before", serviceId)
@@ -153,6 +160,7 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 	if num < 0 { // remove all when negative num
 		reduceNum = len(scheduleService.deployers)
 	}
+
 	elasticNum := len(scheduleService.deployers) - scheduleService.service.Dedicated
 	if reduceNum > elasticNum {
 		reduceNum = elasticNum // make sure the Dedicated
@@ -171,6 +179,8 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 		if err != nil {
 			log.Errorf("Stop container failed, serviceId:%s: %v", serviceId, err)
 		}
+		// TODO StoreToConsul for killing node-container in this service
+		log.Infof("Stopped serviceId:%s, nodeId:%s, containerId:%s", serviceId, deployer.node.NodeId, deployer.containerId)
 		// TODO deal with the failed node
 		returnNodes = append(returnNodes, deployer.node)
 	}

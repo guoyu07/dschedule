@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"fmt"
-	log "github.com/omidnikta/logrus"
+	//log "github.com/omidnikta/logrus"
 	"github.com/samalba/dockerclient"
 	"github.com/weibocom/dschedule/structs"
 	"strconv"
@@ -30,8 +30,6 @@ func NewDeployer(node *structs.Node, dockerPort int, container *structs.Containe
 }
 
 func (this *Deployer) Start() error {
-
-	log.Infof("deployer start container:%v", this.containerId)
 
 	// Network: Expose frist and binding after: https://github.com/docker/docker/issues/2785
 	//          https://docker-py.readthedocs.org/en/latest/port-bindings/
@@ -72,12 +70,12 @@ func (this *Deployer) Start() error {
 		AttachStdin: true,
 		Tty:         true,
 	}
-	log.Infof("deployer create container: %v", containerConfig)
+	//log.Infof("deployer create container: %v", containerConfig)
 	containerId, err := this.docker.CreateContainer(containerConfig, "", nil)
 	if err != nil {
 		return err
 	}
-	log.Infof("create container containerId: %v", containerId)
+	//log.Infof("deployer created container containerId: %v", containerId)
 	// Start the container
 	hostConfig := &dockerclient.HostConfig{
 		Binds:        binds,
@@ -86,16 +84,17 @@ func (this *Deployer) Start() error {
 	}
 	err = this.docker.StartContainer(containerId, hostConfig)
 	if err != nil {
-		log.Errorf("deployer start container failed, cause: %v", err)
+		//log.Errorf("deployer start container failed, cause: %v", err)
 		return err
 	}
+	//log.Infof("deployer started container containerId: %v", containerId)
 	this.containerId = containerId
 	return nil
 }
 
 func (this *Deployer) Stop() error {
-	log.Infoln("deployer stop container:%v", this.containerId)
 	// Stop the container (with 5 seconds timeout)
 	this.docker.StopContainer(this.containerId, 5) // 5 -> timeout
+	//log.Infof("deployer stopped container:%v", this.containerId)
 	return nil
 }
