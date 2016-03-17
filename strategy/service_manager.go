@@ -29,11 +29,16 @@ func NewServiceManager(strategyName string, resourceManager *scheduler.ResourceM
 }
 
 func (serviceManager *ServiceManager) GetService(serviceId string) (*structs.Service, error) {
-	// serviceManager.scheduler.
-	return nil, nil
+	if service, ok := serviceManager.services[serviceId]; ok {
+		return service, nil
+	}
+	return nil, fmt.Errorf("get service failed, serviceId:%v", serviceId)
 }
 
 func (serviceManager *ServiceManager) AddService(service *structs.Service) (string, error) {
+	if _, ok := serviceManager.services[service.ServiceId]; ok {
+		return "", fmt.Errorf("add service failed, cause service:%v already exist.", service.ServiceId)
+	}
 	serviceManager.services[service.ServiceId] = service
 
 	serviceManager.setServiceDefaultProperties(service)

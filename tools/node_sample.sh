@@ -2,7 +2,7 @@
 
 #节点新增，删除，查询接口脚本
 host="localhost"
-ip=""
+ip="11989"
 
 # 添加新的节点
 curl -X POST -d '{
