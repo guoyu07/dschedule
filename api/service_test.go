@@ -21,19 +21,20 @@ func TestService_ADD(t *testing.T) {
 		"strategyName": structs.ServiceStrategyCrontab,
 		"strategyConfig": []map[string]interface{}{
 			map[string]interface{}{
-				"time":        "@every 20s",
+				"time":        "13:00:00",
 				"instanceNum": 1,
+				"runRightNow": true,
 			},
-			// map[string]interface{}{
-			// 	"time":        "@every 2s",
-			// 	"instanceNum": 3,
-			// },
+			map[string]interface{}{
+				"time":        "13:11:00",
+				"instanceNum": 0,
+			},
 		},
 		"priority": 2,
 		"container": map[string]interface{}{
-			"type":    "docker",
-			"image":   "docker.io/redis:2.8", //"docker.io/nginx", //"docker.io/redis:2.8",
-			"command": "redis-server",        //"nginx",           // "redis-server",
+			"type":  "docker",
+			"image": "docker.io/gliderlabs/registrator", //"docker.io/nginx", //"docker.io/redis:2.8",
+			//"command": "redis-server",                     //"nginx",           // "redis-server",
 			"network": "host",
 		},
 		"dedicated": 10,
@@ -56,8 +57,10 @@ func TestService_ADD(t *testing.T) {
 		t.Fatalf("add node failed, cause:%v", err)
 	}
 	t.Logf("add service success, info: %v", info)
+	time.Sleep(time.Second * 60)
 }
 
+/*
 func TestService_MODIFY(t *testing.T) {
 	t.Log("start test service modify")
 	srv := MakeHTTPServer(t)
@@ -106,3 +109,4 @@ func TestService_MODIFY(t *testing.T) {
 	t.Logf("modify service success, info: %v", ok)
 	time.Sleep(time.Second * 40)
 }
+*/

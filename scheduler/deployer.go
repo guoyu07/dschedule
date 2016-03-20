@@ -5,7 +5,6 @@ import (
 	//log "github.com/omidnikta/logrus"
 	"github.com/samalba/dockerclient"
 	"github.com/weibocom/dschedule/structs"
-	"strconv"
 	"strings"
 )
 
@@ -36,12 +35,12 @@ func (this *Deployer) Start() error {
 	exposedPorts := make(map[string]struct{})
 	portBindings := make(map[string][]dockerclient.PortBinding)
 	for containerPort, hostPort := range this.container.PortMapping {
-		key := fmt.Sprintf("%d/tcp", containerPort)
+		key := fmt.Sprintf("%s/tcp", containerPort)
 		exposedPorts[key] = struct{}{}
 		portBindings[key] = []dockerclient.PortBinding{
 			dockerclient.PortBinding{
 				//HostIp:   "0.0.0.0",
-				HostPort: strconv.Itoa(hostPort),
+				HostPort: hostPort,
 			},
 		}
 	}

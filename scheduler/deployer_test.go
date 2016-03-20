@@ -48,8 +48,8 @@ func TestDeployer(t *testing.T) {
 		//Network: "HOST",
 		Network: "BRIDGE",
 		// 端口映射，key为container的端口，value为host中的端口
-		PortMapping: map[int]int{
-			80: 100,
+		PortMapping: map[string]string{
+			"80": "100",
 		},
 
 		// 容器启动时需要执行的命令
