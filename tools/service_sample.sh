@@ -37,8 +37,7 @@ curl -X POST -d '{
 	      "/data0/yarn":"/data0/yarn",
 	      "/data1/yarn":"/data1/yarn",
 	      "/data2/yarn":"/data2/yarn",
-	      "/data3/yarn":"/data3/yarn",
-	      "/etc/hadoop/conf":"/etc/hadoop/conf"
+	      "/data3/yarn":"/data3/yarn"
 	    }
 	}
 }' "http://$ip:$port/service/"
@@ -77,8 +76,7 @@ curl -X PUT -d '{
 	      "/data0/yarn":"/data0/yarn",
 	      "/data1/yarn":"/data1/yarn",
 	      "/data2/yarn":"/data2/yarn",
-	      "/data3/yarn":"/data3/yarn",
-	      "/etc/hadoop/conf":"/etc/hadoop/conf"
+	      "/data3/yarn":"/data3/yarn"
 	    }
 	}
 }' "http://$ip:$port/service/"
