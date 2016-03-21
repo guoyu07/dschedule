@@ -122,11 +122,6 @@ func (s *HTTPServer) registerHandlers(enableDebug bool) {
 
 	// s.mux.HandleFunc("/status", s.wrap(s.Status))
 
-	// s.mux.HandleFunc("/service/", s.wrap(s.ServiceEndpoint))
-	// s.mux.HandleFunc("/repair/", s.wrap(s.RepairEndpoint))
-	// s.mux.HandleFunc("/exec/", s.wrap(s.ExecEndpoint))
-	// s.mux.HandleFunc("/machine/", s.wrap(s.MachineEndpoint))
-
 	s.mux.HandleFunc("/node/", s.wrap(s.NodeEndpoint))
 	s.mux.HandleFunc("/service/", s.wrap(s.ServiceEndpoint))
 
@@ -191,6 +186,7 @@ func (s *HTTPServer) wrap(handler func(resp http.ResponseWriter, req *http.Reque
 		// Write out the JSON object
 		// return null for no data
 		//if obj != nil {
+		log.Debugf("output api response: %v", obj)
 		var buf []byte
 		if prettyPrint {
 			buf, err = json.MarshalIndent(obj, "", "    ")

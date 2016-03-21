@@ -60,7 +60,7 @@ func (this *Scheduler) Register(service *structs.Service) (bool, error) {
 }
 
 func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
-	//log.Infof("invoke scheduler Add....... serviceId:%v, num:%v", serviceId, num)
+	log.Infof("invoke scheduler Add....... serviceId:%v, num:%v", serviceId, num)
 	// check if > max
 	scheduleService := this.services[serviceId]
 	if scheduleService == nil {
@@ -143,7 +143,7 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 }
 
 func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
-	//log.Infof("deploy remove ...... serviceId:%v, num:%v", serviceId, num)
+	log.Infof("deploy remove ...... serviceId:%v, num:%v", serviceId, num)
 	scheduleService := this.services[serviceId]
 	if scheduleService == nil {
 		return 0, fmt.Errorf("serviceId %d not Register before", serviceId)
@@ -158,6 +158,7 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 	if num < 0 { // remove all when negative num
 		reduceNum = len(scheduleService.deployers)
 	}
+
 	log.Debugf("deployers:%v, dedicated:%v, reduceNum:%v", len(scheduleService.deployers), scheduleService.service.Dedicated, reduceNum)
 	elasticNum := len(scheduleService.deployers) - scheduleService.service.Dedicated
 	if reduceNum > elasticNum {

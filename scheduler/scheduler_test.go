@@ -75,8 +75,8 @@ func TestScheduler(t *testing.T) {
 			//Network: "HOST",
 			Network: "BRIDGE",
 			// 端口映射，key为container的端口，value为host中的端口
-			PortMapping: map[int]int{
-				6379: 6378,
+			PortMapping: map[string]string{
+				"6379": "6378",
 			},
 
 			// 容器启动时需要执行的命令
@@ -103,8 +103,8 @@ func TestScheduler(t *testing.T) {
 	service2.Priority = 3
 	service2.Dedicated = 0
 	service2.Elastic = 1
-	service2.Container.PortMapping = map[int]int{
-		6379: 6377,
+	service2.Container.PortMapping = map[string]string{
+		"6379": "6377",
 	}
 	_, err = scheduler.Register(&service2)
 	if err != nil {

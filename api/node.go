@@ -15,7 +15,6 @@ func (s *HTTPServer) NodeEndpoint(resp http.ResponseWriter, req *http.Request) (
 	log.Infof("http request url: %v, method: %v", req.URL.String(), req.Method)
 	nodeId := strings.TrimPrefix(req.URL.Path, "/node/")
 	// Switch on the method
-	log.Infoln(nodeId)
 	switch req.Method {
 	case "GET":
 		if nodeId != "" {
@@ -74,7 +73,7 @@ func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (strin
 	if err != nil {
 		return "", fmt.Errorf("parse NodeMeta from request failed, cause: %v", err)
 	}
-	log.Debugf("resource :%v", s.resourceManager)
+	// log.Debugf("resource :%v", s.resourceManager)
 	nodeId, err := s.resourceManager.AddMeta(meta)
 	if err != nil {
 		log.Warnf("RM add node meta failed, cause:%v", err)
@@ -85,7 +84,7 @@ func (s *HTTPServer) addNode(resp http.ResponseWriter, req *http.Request) (strin
 }
 
 func (s *HTTPServer) deleteNode(resp http.ResponseWriter, req *http.Request, nodeId string) (string, error) {
-	err := s.resourceManager.RemoveNode(nodeId)
+	err := s.resourceManager.DeleteNode(nodeId)
 	if err != nil {
 		log.Warnf("RM remove node failed, cause:%v", err)
 		return "FAILED", fmt.Errorf("RM remove node failed, cause: %v", err)

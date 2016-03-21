@@ -59,6 +59,9 @@ type Container struct {
 	//镜像名
 	Image string
 
+	//容器名
+	Name string
+
 	// 容器使用的网络模式，可选值HOST，BRIDGE，NONE，CONTAINER:NAME
 	Network string
 
@@ -69,7 +72,7 @@ type Container struct {
 	Volumes map[string]string
 
 	// 端口映射，key为container的端口，value为host中的端口
-	PortMapping map[int]int
+	PortMapping map[string]string
 
 	// 容器启动时需要执行的命令
 	Command string
