@@ -59,6 +59,9 @@ type Container struct {
 	//镜像名
 	Image string
 
+	//容器名
+	Name string
+
 	// 容器使用的网络模式，可选值HOST，BRIDGE，NONE，CONTAINER:NAME
 	Network string
 

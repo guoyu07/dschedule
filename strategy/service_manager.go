@@ -63,8 +63,12 @@ func (serviceManager *ServiceManager) AddService(service *structs.Service) (stri
 }
 
 func (serviceManager *ServiceManager) ModifyService(serviceId string, service *structs.Service) (bool, error) {
-	if _, ok := serviceManager.services[serviceId]; ok {
-		return false, fmt.Errorf("modify service failed, cause service:%v is not exist.", serviceId)
+	_, ok := serviceManager.services[serviceId]
+	if !ok {
+		serv, _ := serviceManager.GetService(serviceId)
+		if serv == nil {
+			return false, fmt.Errorf("modify service failed, cause service:%v is not exist.", serviceId)
+		}
 	}
 
 	serviceManager.setServiceDefaultProperties(service)
@@ -74,7 +78,7 @@ func (serviceManager *ServiceManager) ModifyService(serviceId string, service *s
 		return false, fmt.Errorf("store service failed, cause: %v", err)
 	}
 
-	ok, err := serviceManager.scheduler.Register(service)
+	ok, err = serviceManager.scheduler.Register(service)
 	if !ok {
 		return false, fmt.Errorf("scheduler register a service failed, cause: %v", err)
 	}
@@ -94,7 +98,7 @@ func (serviceManager *ServiceManager) DeleteService(serviceId string) (string, e
 	if err != nil {
 		return "", fmt.Errorf("remove service from storage failed, cause: %v", err)
 	}
-	return "", nil
+	return "SUCCESS", nil
 }
 
 func (serviceManager *ServiceManager) GetService(serviceId string) (*structs.Service, error) {

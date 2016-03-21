@@ -17,7 +17,6 @@ type CrontabStrategy struct {
 type Config struct {
 	Time        string
 	InstanceNum int
-	RunRightNow bool //虽然配置了crontab的时间，但是对于需要立即执行的任务可以设置RunRightNow为1.
 }
 
 func NewCrontabStrategy() Strategy {
@@ -42,14 +41,10 @@ func (crontabStrategy *CrontabStrategy) Applying(service *structs.Service, sched
 				continue
 			}
 			log.Infof("config: %v", c)
-			var runRightNow bool = false
-			if value, ok := c["runRightNow"]; ok {
-				runRightNow = value.(bool)
-			}
+
 			config := &Config{
 				Time:        c["time"].(string),
 				InstanceNum: (int)(c["instanceNum"].(float64)),
-				RunRightNow: runRightNow,
 			}
 			configs = append(configs, config)
 		}
@@ -59,14 +54,10 @@ func (crontabStrategy *CrontabStrategy) Applying(service *structs.Service, sched
 		if !ok {
 			log.Errorf("service strategyConfig assertion failed, cause : %v", c)
 		}
-		var runRightNow bool = false
-		if value, ok := c["runRightNow"]; ok {
-			runRightNow = value.(bool)
-		}
+
 		config := &Config{
 			Time:        c["time"].(string),
 			InstanceNum: (int)(c["instanceNum"].(float64)),
-			RunRightNow: runRightNow,
 		}
 		configs = append(configs, config)
 	default:
@@ -80,10 +71,10 @@ func (crontabStrategy *CrontabStrategy) Applying(service *structs.Service, sched
 			log.Errorf("parse config failed, cause : %v", err)
 			continue
 		}
-		if config.RunRightNow {
-			crontabStrategy.executableFunc(service, config, scheduler)
-			log.Infof("run right now: %v", config)
-		}
+		log.Infof("run right now .....")
+		// just run it immediately
+		crontabStrategy.executableFunc(service, config, scheduler)
+		log.Infof("run right now already: %v", config)
 
 		crontabStrategy.cronObject.AddFunc(expression, crontabStrategy.crontabFunc(service, config, scheduler))
 

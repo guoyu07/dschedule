@@ -65,7 +65,11 @@ func (this *ResourceManager) ModifyMeta(nodeId string, meta *structs.NodeMeta) e
 			return nil
 		}
 	}
-	return fmt.Errorf("No nodeId: %s", nodeId)
+	nodes, _ := this.RetriveNode(nodeId)
+	if len(nodes) < 1 {
+		return fmt.Errorf("No nodeId: %s", nodeId)
+	}
+	return nil
 }
 
 func (this *ResourceManager) DeleteNode(nodeId string) error {
