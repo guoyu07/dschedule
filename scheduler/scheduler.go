@@ -13,9 +13,11 @@ const (
 )
 
 type ScheduleService struct {
-	service   *structs.Service
-	deployers []*Deployer
-	mutex     sync.Mutex
+	service        *structs.Service
+	beforeServices []*structs.Service
+	afterServices  []*structs.Service
+	deployers      []*Deployer
+	mutex          sync.Mutex
 }
 
 type Scheduler struct {
@@ -43,9 +45,26 @@ func (this *Scheduler) Register(service *structs.Service) (bool, error) {
 		return false, fmt.Errorf("service.Priority %d is should in [%d, %d]",
 			service.Priority, structs.MinPriority, structs.MaxPriority)
 	}
+	var beforeServices, afterServices []*structs.Service
+	for _, serviceId := range service.BeforeServiceIds {
+		if schedulerService, ok := this.services[serviceId]; ok {
+			beforeServices = append(beforeServices, schedulerService.service)
+		} else {
+			return false, fmt.Errorf("beforeServiceId:%d not register", serviceId)
+		}
+	}
+	for _, serviceId := range service.AfterServiceIds {
+		if schedulerService, ok := this.services[serviceId]; ok {
+			afterServices = append(afterServices, schedulerService.service)
+		} else {
+			return false, fmt.Errorf("afterServiceId:%d not register", serviceId)
+		}
+	}
 
 	scheduleService := &ScheduleService{
-		service: service,
+		service:        service,
+		beforeServices: beforeServices,
+		afterServices:  afterServices,
 	}
 	this.services[service.ServiceId] = scheduleService
 	// TODO StoreToConsul
@@ -59,7 +78,13 @@ func (this *Scheduler) Register(service *structs.Service) (bool, error) {
 	return true, nil
 }
 
-func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
+// TODO
+func (this *Scheduler) Keep(serviceId string, num int) (bool, error) {
+	return false, nil
+}
+
+// Providing a non-nil stopCh can be used to stop continuing waiting avilable resource
+func (this *Scheduler) Add(serviceId string, num int, stopCh <-chan struct{}) (bool, error) {
 	log.Infof("invoke scheduler Add....... serviceId:%v, num:%v", serviceId, num)
 	// check if > max
 	scheduleService := this.services[serviceId]
@@ -73,72 +98,94 @@ func (this *Scheduler) Add(serviceId string, num int) (bool, error) {
 			num, len(scheduleService.deployers), service.Dedicated, service.Elastic)
 	}
 
+	var containers []*structs.Container
+	for _, service := range scheduleService.beforeServices {
+		containers = append(containers, service.Container)
+	}
+	containers = append(containers, service.Container)
+	for _, service := range scheduleService.afterServices {
+		containers = append(containers, service.Container)
+	}
+
 	// asynchronous
-	go func() {
-		for needRequestNum := num; needRequestNum > 0; {
-			nodes, err := this.resourceManager.AllocNodes(needRequestNum)
-			if err != nil {
-				log.Errorf("AllocNodes failed: %v", err)
-				return
-			}
+	//go func() {
+	var wg sync.WaitGroup
+	for needRequestNum := num; needRequestNum > 0; {
+		select {
+		case <-stopCh:
+			// CARE: maybe need break for, if there are codes after outer for
+			return false, fmt.Errorf("Got a stopCh, left %d containers need to expand", needRequestNum)
+		default: // stopCh == nil
+		}
 
-			// TODO continue last deploying when process restart, ???tcc????
-			// deploy
-			var deployers []*Deployer
-			for _, node := range nodes {
-				deployer, err := NewDeployer(node, this.dockerPort, service.Container)
-				if err == nil {
-					err = deployer.Start()
-				}
-				if err != nil {
-					node.Failed++
-					log.Errorf("NewDeployer or Start container IP '%s' failed %d times: %v",
-						node.Meta.IP, node.Failed, err)
-					err := this.resourceManager.ReturnNodes([]*structs.Node{node})
-					if err != nil {
-						log.Errorf("ReturnNodes %s IP '%s' failed: %v", node.NodeId, node.Meta.IP, err)
-					}
-					continue
-				}
-
-				// TODO StoreToConsul for new node-container in this service
-				// TODO tell resourceManager, scheduler have used the resource, esle rm will reback the resource
-				log.Infof("Started serviceId:%s, nodeId:%s, containerId:%s", serviceId, deployer.node.NodeId, deployer.containerId)
-				node.Failed = 0
-				deployers = append(deployers, deployer)
-			}
-			scheduleService.mutex.Lock()
-			scheduleService.deployers = append(scheduleService.deployers, deployers...)
-			scheduleService.mutex.Unlock()
-
-			log.Infof("needRequestNum=%d, available deployer num=%d", needRequestNum, len(deployers))
-			needRequestNum -= len(deployers)
-			// remove low priority service nodes
-			if len(deployers) < needRequestNum {
-				time.Sleep(NoResourceWaitTime)
-				// TODO TODO TODO do wait priority
-
-				needKill := needRequestNum
+		wg.Wait()
+		allocNodes, err := this.resourceManager.AllocNodes(needRequestNum)
+		if err != nil {
+			return false, fmt.Errorf("AllocNodes failed: %v, needRequestNum:%d", err, needRequestNum)
+		}
+		// remove low priority service nodes
+		if needKill := needRequestNum - len(allocNodes); needKill > 0 {
+			// TODO TODO TODO do wait priority  -> channel
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				expectKillNum := needKill
 			LOOP:
 				// search low priority queue and stop them
 				for i := structs.MinPriority; i < service.Priority; i++ {
 					for serviceId, _ := range this.priorityServices[i] {
 						//fmt.Printf("Key: %s  Value: %s\n", key, value)
 						// TODO asynchronous
-						reduceNum, err := this.Remove(serviceId, -1)
+						removedNum, err := this.Remove(serviceId, needKill)
 						if err != nil {
 							log.Errorf("Remove low priority serviceId %s failed : %v", serviceId, err)
 							continue
 						}
-						needKill -= reduceNum
+						needKill -= removedNum
 						if needKill <= 0 {
 							break LOOP
 						}
 					}
 				}
-			}
+				if expectKillNum == needKill { // no node killed
+					time.Sleep(NoResourceWaitTime)
+				}
+			}()
 		}
-	}()
+
+		// TODO continue last deploying when process restart, ???tcc????
+		// deploy
+		var deployers []*Deployer
+		for _, node := range allocNodes {
+			deployer, err := NewDeployer(node, this.dockerPort, containers)
+			if err == nil {
+				err = deployer.Start()
+			}
+			if err != nil {
+				node.Failed++
+				log.Errorf("NewDeployer or Start container IP '%s' failed %d times: %v",
+					node.Meta.IP, node.Failed, err)
+				err := this.resourceManager.ReturnNodes([]*structs.Node{node})
+				if err != nil {
+					log.Errorf("ReturnNodes %s IP '%s' failed: %v", node.NodeId, node.Meta.IP, err)
+				}
+				continue
+			}
+
+			// TODO StoreToConsul for new node-container in this service
+			// TODO tell resourceManager, scheduler have used the resource, esle rm will reback the resource
+			log.Infof("Started serviceId:%s, nodeId:%s, containerIds:%v", serviceId, deployer.node.NodeId, deployer.containerIds)
+			node.Failed = 0
+			deployers = append(deployers, deployer)
+		}
+		scheduleService.mutex.Lock()
+		scheduleService.deployers = append(scheduleService.deployers, deployers...)
+		scheduleService.mutex.Unlock()
+
+		log.Infof("needRequestNum=%d, available deployer num=%d", needRequestNum, len(deployers))
+		needRequestNum -= len(deployers)
+	}
+	//}()
 	return true, nil
 }
 
@@ -179,7 +226,7 @@ func (this *Scheduler) Remove(serviceId string, num int) (int, error) {
 			log.Errorf("Stop container failed, serviceId:%s: %v", serviceId, err)
 		}
 		// TODO StoreToConsul for killing node-container in this service
-		log.Infof("Stopped serviceId:%s, nodeId:%s, containerId:%s", serviceId, deployer.node.NodeId, deployer.containerId)
+		log.Infof("Stopped serviceId:%s, nodeId:%s, containerIds:%v", serviceId, deployer.node.NodeId, deployer.containerIds)
 		// TODO deal with the failed node
 		returnNodes = append(returnNodes, deployer.node)
 	}

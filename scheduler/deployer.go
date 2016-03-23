@@ -9,32 +9,68 @@ import (
 )
 
 type Deployer struct {
-	docker      *dockerclient.DockerClient
-	node        *structs.Node
-	container   *structs.Container
-	containerId string
+	docker   *dockerclient.DockerClient
+	node     *structs.Node
+	nodeEnvs []string
+
+	containers   []*structs.Container
+	containerIds []string
 }
 
-func NewDeployer(node *structs.Node, dockerPort int, container *structs.Container) (*Deployer, error) {
+func NewDeployer(node *structs.Node, dockerPort int,
+	containers []*structs.Container) (*Deployer, error) {
+
 	host := fmt.Sprintf("%s:%d", node.Meta.IP, dockerPort)
 	docker, err := dockerclient.NewDockerClient(host, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	var nodeEnvs []string
+	nodeEnvs = append(nodeEnvs, fmt.Sprintf("NODE_META_NAME=%s", node.Meta.Name))
+	nodeEnvs = append(nodeEnvs, fmt.Sprintf("NODE_META_IP=%s", node.Meta.IP))
+	nodeEnvs = append(nodeEnvs, fmt.Sprintf("NODE_META_CPU=%s", node.Meta.CPU))
+	nodeEnvs = append(nodeEnvs, fmt.Sprintf("NODE_META_MEMORY_MB=%s", node.Meta.MemoryMB))
+	nodeEnvs = append(nodeEnvs, fmt.Sprintf("NODE_META_DISK_MB=%s", node.Meta.DiskMB))
+	nodeEnvs = append(nodeEnvs, fmt.Sprintf("NODE_META_DISK_DIRS=%s", strings.Join(node.Meta.DiskDirs, ":")))
+	for key, val := range node.Meta.Attributes {
+		nodeEnvs = append(nodeEnvs, fmt.Sprintf("NODE_META_DISK_ATTRIBUTE_%s=%s", strings.ToUpper(key), val))
+	}
+
 	return &Deployer{
-		docker:    docker,
-		node:      node,
-		container: container,
+		docker:     docker,
+		node:       node,
+		nodeEnvs:   nodeEnvs,
+		containers: containers,
 	}, nil
 }
 
 func (this *Deployer) Start() error {
+	for _, container := range this.containers {
+		containerId, err := this.run(container)
+		if err != nil {
+			return err
+		}
+		this.containerIds = append(this.containerIds, containerId)
+	}
+	return nil
+}
 
+func (this *Deployer) Stop() error {
+	for idx := len(this.containers) - 1; idx >= 0; idx-- {
+		// Stop the container (with 5 seconds timeout)
+		this.docker.StopContainer(this.containerIds[idx], 5) // 5 -> timeout
+		//log.Infof("deployer stopped container:%v", containerId)
+	}
+	return nil
+}
+
+func (this *Deployer) run(container *structs.Container) (string, error) {
 	// Network: Expose frist and binding after: https://github.com/docker/docker/issues/2785
 	//          https://docker-py.readthedocs.org/en/latest/port-bindings/
 	exposedPorts := make(map[string]struct{})
 	portBindings := make(map[string][]dockerclient.PortBinding)
-	for containerPort, hostPort := range this.container.PortMapping {
+	for containerPort, hostPort := range container.PortMapping {
 		key := fmt.Sprintf("%s/tcp", containerPort)
 		exposedPorts[key] = struct{}{}
 		portBindings[key] = []dockerclient.PortBinding{
@@ -45,14 +81,14 @@ func (this *Deployer) Start() error {
 		}
 	}
 
-	var envs []string
-	for key, val := range this.container.Env {
+	envs := this.nodeEnvs[:]
+	for key, val := range container.Env {
 		envs = append(envs, fmt.Sprintf("%s=%s", key, val))
 	}
 
 	volumes := make(map[string]struct{})
 	var binds []string
-	for constainerFile, hostFile := range this.container.Volumes {
+	for constainerFile, hostFile := range container.Volumes {
 		volumes[constainerFile] = struct{}{}
 		binds = append(binds, fmt.Sprintf("%s:%s", hostFile, constainerFile))
 		//volumes[constainerFile] = struct{}{hostFile}
@@ -60,7 +96,7 @@ func (this *Deployer) Start() error {
 
 	// Create a container
 	containerConfig := &dockerclient.ContainerConfig{
-		Image:        this.container.Image,
+		Image:        container.Image,
 		Env:          envs,
 		Volumes:      volumes,
 		ExposedPorts: exposedPorts,
@@ -69,8 +105,8 @@ func (this *Deployer) Start() error {
 		Tty:         true,
 	}
 	// DEBUGGED: System error: exec: "": executable file not found in $PATH
-	if this.container.Command != "" {
-		containerConfig.Cmd = []string{this.container.Command}
+	if container.Command != "" {
+		containerConfig.Cmd = []string{container.Command}
 	}
 	//images, err := this.docker.SearchImages(containerConfig.Image, "", nil)
 	//if err != nil {
@@ -83,34 +119,26 @@ func (this *Deployer) Start() error {
 	// DEBUGGED: "Image not found"
 	err := this.docker.PullImage(containerConfig.Image, nil)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("Pull image(%s) failed: %v", containerConfig.Image, err)
 	}
 	//}
 	//log.Infof("deployer create container: %v", containerConfig)
 	containerId, err := this.docker.CreateContainer(containerConfig, "", nil)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("Create container failed: %v", err)
 	}
 	//log.Infof("deployer created container containerId: %v", containerId)
 	// Start the container
 	hostConfig := &dockerclient.HostConfig{
 		Binds:        binds,
 		PortBindings: portBindings,
-		NetworkMode:  strings.ToLower(this.container.Network),
+		NetworkMode:  strings.ToLower(container.Network),
 	}
 	err = this.docker.StartContainer(containerId, hostConfig)
 	if err != nil {
 		//log.Errorf("deployer start container failed, cause: %v", err)
-		return err
+		return containerId, fmt.Errorf("Start container(%s) failed: %v", err)
 	}
 	//log.Infof("deployer started container containerId: %v", containerId)
-	this.containerId = containerId
-	return nil
-}
-
-func (this *Deployer) Stop() error {
-	// Stop the container (with 5 seconds timeout)
-	this.docker.StopContainer(this.containerId, 5) // 5 -> timeout
-	//log.Infof("deployer stopped container:%v", this.containerId)
-	return nil
+	return containerId, nil
 }
